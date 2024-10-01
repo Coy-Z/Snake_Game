@@ -123,7 +123,7 @@ public:
     ~ApplePos() {}
 };
 
-// Prototype of Global Snake and Apple Objects
+// Declaring Global Snake and Apple Objects
 SnakePos Snake;
 ApplePos Apple;
 
