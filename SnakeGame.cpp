@@ -1,5 +1,196 @@
 #include "SnakeGame.h"
 
+// Declaring Classes
+enum class Direction
+{
+    up, down, left, right
+};
+
+enum SnakeOrApple
+{
+    s = 0, // Snake
+    a = 1, // Apple
+    h = 2  // Head of snake
+};
+
+class SnakePos
+{
+private:
+    std::deque<std::vector<int>> positions;
+public:
+    void reset()
+    {
+        positions.clear();
+        std::vector<int> intStart1{ 0,0 };
+        std::vector<int> intStart2{ -1,0 };
+        positions.push_back(intStart1);
+        positions.push_back(intStart2);
+    }
+    SnakePos()
+    {
+        reset();
+    }
+    void eat(Direction dir)
+    {
+        std::vector<int> newPos = positions[0];
+        if (dir == Direction::up) // Up
+        {
+            newPos[1] += 1;
+            if (newPos[1] > NUMY / 2 - 1)
+            {
+                newPos[1] *= -1;
+            }
+        }
+        else if (dir == Direction::down) // Down
+        {
+            if (newPos[1] <= -NUMY / 2)
+            {
+                newPos[1] *= -1;
+            }
+            newPos[1] -= 1;
+        }
+        else if (dir == Direction::left) // Left
+        {
+            if (newPos[0] <= -NUMX / 2)
+            {
+                newPos[0] *= -1;
+            }
+            newPos[0] -= 1;
+        }
+        else // Right
+        {
+            newPos[0] += 1;
+            if (newPos[0] > NUMX / 2 - 1)
+            {
+                newPos[0] *= -1;
+            }
+        }
+
+        positions.push_front(newPos);
+    }
+
+    void retract()
+    {
+        positions.pop_back();
+    }
+
+    bool overlapCheck()
+    {
+        for (auto it = ++positions.begin(); it != positions.end(); ++it)
+        {
+            if (positions[0] == *it) return true;
+        }
+        return false;
+    }
+
+    const std::deque<std::vector<int>> getPositions()
+    {
+        return positions;
+    }
+
+    const std::vector<int> getPosition(unsigned int index)
+    {
+        return positions[index];
+    }
+
+    ~SnakePos() {}
+};
+
+class ApplePos
+{
+private:
+    std::vector<int> position; // Actual position scaled up to be from [-5, 4] in integers.
+public:
+    void newPosition()
+    {
+        std::srand(std::time(NULL));
+        int randx = (rand() % NUMX) - NUMX / 2;
+        std::srand(std::time(NULL) + 1);
+        int randy = (rand() % NUMY) - NUMY / 2;
+        position = { randx,randy };
+    }
+
+    ApplePos()
+    {
+        this->newPosition();
+    }
+
+    const std::vector<int> getPosition()
+    {
+        return position;
+    }
+
+    ~ApplePos() {}
+};
+
+// Prototype of Global Snake and Apple Objects
+SnakePos Snake;
+ApplePos Apple;
+
+// Global Variable Class
+class GlobalVariables
+{
+private:
+    bool help;
+    bool paused;
+    bool game_over;
+    int game_speed;
+    unsigned int score;
+    unsigned int high_score;
+    Direction in_direction;
+    int test_counter;
+public:
+    GlobalVariables()
+    {
+        help = false;
+        paused = false;
+        game_over = false;
+        game_speed = 1;
+        score = 0;
+        high_score = 0;
+        in_direction = Direction::right;
+        test_counter = 0;
+    }
+
+    // help access
+    void helpSet(const bool var) { help = var; }
+    const bool helpGet() const { return help; }
+
+    // paused access
+    void pausedSet(const bool var) { paused = var; }
+    const bool pausedGet() const { return paused; }
+
+    // game_over access
+    void gameOverSet(const bool var) { game_over = var; }
+    const bool gameOverGet() const { return game_over; }
+
+    // game_speed access
+    void gameSpeedSet(const int var) { game_speed = var; }
+    const int gameSpeedGet() const { return game_speed; }
+
+    // score access
+    void scoreSet(const unsigned int var) { score = var; }
+    void incrementScore() { ++score; }
+    const unsigned int scoreGet() const { return score; }
+    
+
+    // high_score access
+    void highScoreSet(const unsigned int var) { high_score = var; }
+    const unsigned int highScoreGet() const { return high_score; }
+    void updateHighScore() { high_score = score; }
+
+    // inDirection access
+    void inDirectionSet(const Direction var) { in_direction = var; }
+    const Direction inDirectionGet() const { return in_direction; }
+
+    // test_counter access
+    void testCounterSet(const int var) { test_counter = var; }
+    const int testCounterGet() const { return test_counter; }
+};
+
+// Initialise Global Variables
+GlobalVariables globalVariables;
+
 // ** Drawing Objects **
 // Draws a rectangle of width dx and height dy.
 void drawRect(std::vector<int> coords, SnakeOrApple val)
@@ -20,9 +211,9 @@ void drawRect(std::vector<int> coords, SnakeOrApple val)
     }
     glBegin(GL_POLYGON);
     glVertex2d(x, y);
-    glVertex2d(x + dx, y);
-    glVertex2d(x + dx, y + dy);
-    glVertex2d(x, y + dy);
+    glVertex2d(x + DX, y);
+    glVertex2d(x + DX, y + DY);
+    glVertex2d(x, y + DY);
     glEnd();
 }
 // Uses drawRect to draw the snake.
@@ -56,7 +247,7 @@ void glutPrint(double x, double y, std::string str, void* FONT = GLUT_BITMAP_HEL
 // Displaying the help prompt.
 void display_help()
 {
-    if (help)
+    if (globalVariables.helpGet())
     {
         std::string helpString1("Press arrow keys to change direction.");
         std::string helpString2("Hit the space bar to pause and play.");
@@ -84,19 +275,19 @@ void specialKeyControl(int key, int x, int y)
     {
     case GLUT_KEY_LEFT: // Left Arrow
         // std::cout << "Left Pressed" << std::endl;
-        inDirection = Direction::left;
+        globalVariables.inDirectionSet(Direction::left);
         break;
     case GLUT_KEY_UP: // Up Arrow
         // std::cout << "Up Pressed" << std::endl;
-        inDirection = Direction::up;
+        globalVariables.inDirectionSet(Direction::up);
         break;
     case GLUT_KEY_RIGHT: // Right Arrow
         // std::cout << "Right Pressed" << std::endl;
-        inDirection = Direction::right;
+        globalVariables.inDirectionSet(Direction::right);
         break;
     case GLUT_KEY_DOWN: // Down Arrow
         // std::cout << "Down Pressed" << std::endl;
-        inDirection = Direction::down;
+        globalVariables.inDirectionSet(Direction::down);
         break;
     }
 }
@@ -108,21 +299,21 @@ void keyControl(unsigned char key, int x, int y)
     {
     case 'h': case 'H':
         // std::cout << "H Pressed" << std::endl;
-        if (help)
+        if (globalVariables.helpGet())
         {
-            help = false;
+            globalVariables.helpSet(false);
         }
         else
         {
-            help = true;
+            globalVariables.helpSet(true);
         }
         break;
     case 'r': case 'R':
         // std::cout << "R Pressed" << std::endl;
-        game_over = false;
-        score = 0;
+        globalVariables.gameOverSet(false);
+        globalVariables.scoreSet(0);
         Snake.reset();
-        inDirection = Direction::right;
+        globalVariables.inDirectionSet(Direction::right);
         Apple.newPosition();
         break;
     case 27:
@@ -131,16 +322,13 @@ void keyControl(unsigned char key, int x, int y)
         break;
     case 32:
         // std::cout << "Space Pressed" << std::endl;
-        if (paused)
+        if (globalVariables.pausedGet())
         {
-            //game_speed = game_speed_buffer;
-            paused = false;
+            globalVariables.pausedSet(false);
         }
         else
         {
-            //game_speed_buffer = game_speed;
-            //game_speed = 0;
-            paused = true;
+            globalVariables.pausedSet(true);
         }
         break;
     }
@@ -153,9 +341,9 @@ void updateGame()
     unsigned long delay;
 
     // Speed-controlled delay
-    if (game_speed > 0)
+    if (globalVariables.gameSpeedGet() > 0)
     {
-        delay = max_delay; // This will be used for game speed variation at a later date.
+        delay = MAX_DELAY; // This will be used for game speed variation at a later date.
 #ifdef _WIN32
         Sleep(delay / 1000); // milliseconds
 #else
@@ -168,16 +356,16 @@ void updateGame()
     }
     
     // Update SnakePos object
-    if (!game_over && !paused)
+    if (!globalVariables.gameOverGet() && !globalVariables.pausedGet())
     {
-        Snake.eat(inDirection);
+        Snake.eat(globalVariables.inDirectionGet());
         if (Snake.overlapCheck())
         {
-            game_over = true;
+            globalVariables.gameOverSet(true);
         }
         else if (Snake.getPosition(0) == Apple.getPosition())
         {
-            ++score;
+            globalVariables.incrementScore();
             Apple.newPosition();
         }
         else
@@ -204,14 +392,14 @@ void display()
     // Clear all pixels
     glClear(GL_COLOR_BUFFER_BIT);
 
-    if (game_over)
+    if (globalVariables.gameOverGet())
     {
-        if (score > high_score) high_score = score;
+        if (globalVariables.scoreGet() > globalVariables.highScoreGet()) globalVariables.updateHighScore();
         // Print Game Over Text
         glutPrint(-0.2, 0.5, "Game Over!", GLUT_BITMAP_HELVETICA_18);
 
         // Print Final Score
-        glutPrint(-0.1, 0.2, "Score: " + std::to_string(score));
+        glutPrint(-0.1, 0.2, "Score: " + std::to_string(globalVariables.scoreGet()));
 
         // Restart Game
         glutPrint(-0.2, -0.1, "Press 'r' to restart.");
@@ -224,14 +412,14 @@ void display()
         drawApple(Apple);
 
         // Print score
-        glutPrint(-0.1, 0.9, "Score: " + std::to_string(score));
+        glutPrint(-0.1, 0.9, "Score: " + std::to_string(globalVariables.scoreGet()));
     }
 
     // Print help prompt
     display_help();
 
     // Print high score
-    glutPrint(-0.9, 0.9, "High Score: " + std::to_string(high_score));
+    glutPrint(-0.9, 0.9, "High Score: " + std::to_string(globalVariables.highScoreGet()));
     // Testing
     // glutPrint(-0.9, 0.9, std::to_string(test_counter));
 
@@ -242,7 +430,7 @@ void display()
 // Ensuring the window cannot be resized
 void windowReshaping(int width, int height)
 {
-    glutReshapeWindow(window_width, window_height);
+    glutReshapeWindow(WINDOW_WIDTH, WINDOW_HEIGHT);
 }
 
 int main(int argc, char* argv[])
@@ -252,7 +440,7 @@ int main(int argc, char* argv[])
     // Set display mode.
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA);
     // Set the window size and position.
-	glutInitWindowSize(window_width, window_height);
+	glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
 	glutInitWindowPosition(0, 0);
     // Initialise GLUT
     init();
