@@ -18,6 +18,9 @@
     <ClInclude Include="SnakeGame.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="packages\freeglut.3.0.0.v140.1.0.2\sources\GL\glut.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="SnakeGame.cpp">

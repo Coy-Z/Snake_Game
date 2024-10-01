@@ -28,7 +28,7 @@
 const int window_width = 500, window_height = 500;
 const int numx = 10, numy = 10;
 const double dx = 2. / numx, dy = 2. / numx;
-const double max_delay = 200000;
+const unsigned long max_delay = 200000;
 
 enum class Direction
 {

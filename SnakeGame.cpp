@@ -8,15 +8,15 @@ void drawRect(std::vector<int> coords, SnakeOrApple val)
     double y = coords[1] / 5.;
     if (val == 0)
     {
-        glColor3f(0., 1., 0.);
+        glColor3d(0., 1., 0.);
     }
     else if (val == 1)
     {
-        glColor3f(1., 0., 0.);
+        glColor3d(1., 0., 0.);
     }
     else
     {
-        glColor3f(0., 0.8, 0.);
+        glColor3d(0., 0.8, 0.);
     }
     glBegin(GL_POLYGON);
     glVertex2d(x, y);
@@ -155,7 +155,7 @@ void updateGame()
     // Speed-controlled delay
     if (game_speed > 0)
     {
-        delay = (5 - game_speed) * max_delay / 4;
+        delay = max_delay; // This will be used for game speed variation at a later date.
 #ifdef _WIN32
         Sleep(delay / 1000); // milliseconds
 #else
