@@ -34,6 +34,7 @@ enum class Direction;
 enum SnakeOrApple;
 class SnakePos;
 class ApplePos;
+class GlobalVariables;
 
 // Prototype of the GL Window
 int window;
