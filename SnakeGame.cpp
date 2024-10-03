@@ -17,14 +17,27 @@ class SnakePos
 {
 private:
     std::deque<std::vector<int>> positions;
+    std::set<std::vector<int>> notPositions;
 public:
     void reset()
     {
         positions.clear();
+        notPositions.clear();
         std::vector<int> intStart1{ 0,0 };
         std::vector<int> intStart2{ -1,0 };
         positions.push_back(intStart1);
         positions.push_back(intStart2);
+        for (int i = -NUMX / 2; i < NUMX / 2; ++i)
+        {
+            for (int j = -NUMY / 2; j < NUMY / 2; ++j)
+            {
+                if (!(((i == 0) && (j == 0)) || ((i == -1) && (j == 0))))
+                {
+                    std::vector<int> coord{ i,j };
+                    notPositions.insert(coord);
+                }
+            }
+        }
     }
     SnakePos()
     {
@@ -67,10 +80,13 @@ public:
         }
 
         positions.push_front(newPos);
+        if (notPositions.find(newPos) != notPositions.end())
+        notPositions.erase(notPositions.find(newPos));
     }
 
     void retract()
     {
+        notPositions.insert(*(--positions.end()));
         positions.pop_back();
     }
 
@@ -93,6 +109,11 @@ public:
         return positions[index];
     }
 
+    const std::set<std::vector<int>> getNotPositions()
+    {
+        return notPositions;
+    }
+
     ~SnakePos() {}
 };
 
@@ -101,18 +122,18 @@ class ApplePos
 private:
     std::vector<int> position; // Actual position scaled up to be from [-5, 4] in integers.
 public:
-    void newPosition()
+    void newPosition(std::set<std::vector<int>> availablePos)
     {
         std::srand(std::time(NULL));
-        int randx = (rand() % NUMX) - NUMX / 2;
-        std::srand(std::time(NULL) + 1);
-        int randy = (rand() % NUMY) - NUMY / 2;
-        position = { randx,randy };
+        int index = std::rand() % availablePos.size();
+        auto it = availablePos.begin();
+        std::advance(it, index);
+        position = *it;
     }
 
-    ApplePos()
+    ApplePos(std::set<std::vector<int>> availablePos)
     {
-        this->newPosition();
+        this->newPosition(availablePos);
     }
 
     const std::vector<int> getPosition()
@@ -125,7 +146,7 @@ public:
 
 // Declaring Global Snake and Apple Objects
 SnakePos Snake;
-ApplePos Apple;
+ApplePos Apple(Snake.getNotPositions());
 
 // Global Variable Class
 class GlobalVariables
@@ -314,7 +335,7 @@ void keyControl(unsigned char key, int x, int y)
         globalVariables.scoreSet(0);
         Snake.reset();
         globalVariables.inDirectionSet(Direction::right);
-        Apple.newPosition();
+        Apple.newPosition(Snake.getNotPositions());
         break;
     case 27:
         // std::cout << "Esc Pressed" << std::endl;
@@ -366,7 +387,7 @@ void updateGame()
         else if (Snake.getPosition(0) == Apple.getPosition())
         {
             globalVariables.incrementScore();
-            Apple.newPosition();
+            Apple.newPosition(Snake.getNotPositions());
         }
         else
         {
